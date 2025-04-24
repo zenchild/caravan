@@ -5,8 +5,12 @@ defmodule Caravan.Epmd.Client do
 
   It will return a port from `Caravan.Epmd.dist_port/1` as opposed to calling
   out to the `epmd` daemon and having it assign us one.
+
+  If you are setting the `ERL_DIST_PORT` environment variable, you have the
+  ability to run a different internal port from your external port.
   """
   alias Caravan.Epmd
+
   # erl_distribution wants us to start a worker process.  We don't
   # need one, though.
   def start_link do
@@ -29,8 +33,14 @@ defmodule Caravan.Epmd.Client do
     {:ok, creation}
   end
 
-  def port_please(name, _ip) do
-    port = Epmd.dist_port(name)
+  def port_please(name, ip) do
+    port =
+      if ip == {127, 0, 0, 1} do
+        local_dist_port(name)
+      else
+        Epmd.dist_port(name)
+      end
+
     # The distribution protocol version number has been 5 ever since
     # Erlang/OTP R6.
     version = 5
@@ -39,7 +49,38 @@ defmodule Caravan.Epmd.Client do
 
   # added for OTP-21
   def address_please(_name, host, _address_family) do
-    :inet.getaddr(host, :inet)
+    my_node = node() |> to_string() |> String.split("@") |> List.last()
+    service_host = to_string(host)
+
+    if my_node == service_host do
+      {:ok, {127, 0, 0, 1}}
+    else
+      :inet.getaddr(host, :inet)
+    end
+  end
+
+  def listen_port_please(name, _host) do
+    {:ok, port} =
+      if String.match?(to_string(name), ~r/^(rpc|rem)-/) do
+        {:ok, 0}
+      else
+        {:ok, local_dist_port(name)}
+      end
+
+    {:ok, port}
+  end
+
+  # ERL_DIST_PORT is available after OTP-23 and can be used to set the Dist
+  # port. If this is being used, you don't need to set
+  # `-proto_dist Caravan.Epmd.Dist`
+  defp local_dist_port(name) do
+    case System.get_env("ERL_DIST_PORT") do
+      nil ->
+        Epmd.dist_port(name)
+
+      port ->
+        String.to_integer(port)
+    end
   end
 
   def names(_hostname) do

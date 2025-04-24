@@ -3,6 +3,8 @@ defmodule Caravan.Epmd do
   Shared logic for determining the Erlang distribution port from the node name.
   """
 
+  @default_listen_port 4370
+
   @doc """
   Returns the Erlang Distribution port based on a node name.
 
@@ -32,7 +34,7 @@ defmodule Caravan.Epmd do
     port =
       case Regex.run(~r/[0-9]+$/, node_name) do
         nil ->
-          4370
+          @default_listen_port
 
         [offset_as_string] ->
           String.to_integer(offset_as_string)
