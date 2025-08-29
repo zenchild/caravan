@@ -4,8 +4,8 @@ defmodule Caravan.Mixfile do
   def project do
     [
       app: :caravan,
-      version: "1.0.0",
-      elixir: "~> 1.6",
+      version: "2.0.0-rc.0",
+      elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
       description: description(),
       package: package(),

@@ -72,10 +72,10 @@ defmodule Caravan.Cluster.DnsStrategy do
     {:noreply, state}
   end
 
-  def find_nodes(%Config{query: q, node_sname: node_sname, dns_client: dns} = state) do
-    q
+  def find_nodes(%Config{query: service, dns_client: dns} = state) do
+    service
     |> dns.get_nodes()
-    |> create_node_names(node_sname)
+    |> create_node_names(service)
     |> remove_self()
     |> connect(state)
   end
@@ -84,10 +84,19 @@ defmodule Caravan.Cluster.DnsStrategy do
     List.delete(node_list, Node.self())
   end
 
-  defp create_node_names(dns_records, node_name) do
-    Enum.map(dns_records, fn {port, host} ->
-      :"#{node_name}-#{port}@#{host}"
+  def create_node_names(dns_records, service) do
+    regex = ~r/^(?<node_name>\w+).#{service}$/
+
+    Enum.map(dns_records, fn {_port, host} ->
+      case Regex.named_captures(regex, host) do
+        %{"node_name" => node_name} ->
+          :"#{node_name}@#{service}"
+
+        nil ->
+          nil
+      end
     end)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp connect(nodes, %Config{connect: c, list_nodes: l, topology: t}) do
