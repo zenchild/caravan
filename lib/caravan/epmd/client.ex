@@ -53,7 +53,7 @@ defmodule Caravan.Epmd.Client do
     my_node = node() |> to_string() |> String.replace("@", ".")
     target_node = "#{name}.#{host}"
 
-    if my_node == target_node do
+    if String.match?(my_node, ~r/^((rpc|rem)-.*-)?#{target_node}$/) do
       {:ok, {127, 0, 0, 1}, local_dist_port(), @distro_version}
     else
       {address, service_port} = get_remote_ip_and_port(target_node)

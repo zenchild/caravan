@@ -85,7 +85,7 @@ defmodule Caravan.Cluster.DnsStrategy do
   end
 
   def create_node_names(dns_records, service) do
-    regex = ~r/^(?<node_name>\w+).#{service}$/
+    regex = ~r/^(?<node_name>[a-z0-9-]+)\.#{service}$/i
 
     Enum.map(dns_records, fn {_port, host} ->
       case Regex.named_captures(regex, host) do
